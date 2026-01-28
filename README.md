@@ -26,9 +26,9 @@
 ## Step 1 — Start the Stack
 
 From the project root (e.g. `docker-images-master/pyspark-jupyter-kafka/`):
-
+```
 docker compose up
-
+```
 Wait until all containers are up. If you see "address already in use" for port 3000, free that port or change the SQLPad port in docker-compose.yml, then run docker compose up again.
 
 ## Step 2 — Get Jupyter URL and Token
