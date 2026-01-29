@@ -19,7 +19,8 @@
 ## Prerequisites
 
 - **Docker** and **Docker Compose** installed
-- Ports **8888**, **9092**, **3000** free (or change mappings in `docker-compose.yml`). If port 3000 is in use, stop the other process or map SQLPad to another port.
+- Ports **8888**, **9092**, **3000** free (or change mappings in `docker-compose.yml`). 
+  If port 3000 is in use, stop the other process or map SQLPad to another port.
 
 ---
 
@@ -29,13 +30,21 @@ From the project root (e.g. `docker-images-master/pyspark-jupyter-kafka/`):
 ```
 docker compose up
 ```
-Wait until all containers are up. If you see "address already in use" for port 3000, free that port or change the SQLPad port in docker-compose.yml, then run docker compose up again.
+Wait until all containers are up. If you see "address already in use" for port 3000, 
+free that port or change the SQLPad port in docker-compose.yml, 
+then run docker compose up again.
 
 ## Step 2 — Get Jupyter URL and Token
 In a new terminal:
+```
 docker exec -it ed-pyspark-jupyter-lab /bin/bash
+```
+Opens an interactive bash shell inside the running Docker container named ed-pyspark-jupyter-lab.
+```
 jupyter server list
-
+```
+Lists all running Jupyter servers inside the container.
+Shows the URL + token you need to open Jupyter in your browse
 
 Copy the URL that looks like: http://406f977e69e6:8888/?token=.... You will use it in the next step.
 
@@ -45,10 +54,34 @@ When prompted for a password/token, paste the token from the jupyter server list
 You can now create notebooks and run PySpark code.
 
 ## Step 4 — Run Your First Streaming Job (TCP Socket)
-4.1 Start a socket data source (separate terminal):
+4.1 Install ncat (if not already available)
+Inside the Jupyter container:
 
+```
 docker exec -it ed-pyspark-jupyter-lab /bin/bash
-ncat -l 9999
+apt-get update
+apt-get install -y ncat
+ncat -v
+```
+nmap provides ncat. ncat -v checks that ncat is available (optional). Exit with Ctrl+C if you only ran it to verify.
+
+4.2 Start a socket data source (separate terminal)
+```
+docker exec -it ed-pyspark-jupyter-lab /bin/bash -c "ncat -l 9999"
+```
+What it’s doing 
+
+docker exec -it → run a command inside a running container
+
+ed-pyspark-jupyter-lab → container name
+
+/bin/bash -c → execute a shell command
+
+ncat -l 9999 → start Netcat in listen mode on port 9999
+
+In short
+ It opens a TCP listener on port 9999 inside the container and waits for incoming connections.
+
 
 Type lines of text and press Enter. Each line is one micro-batch of input for the streaming job. Leave this running.
 
@@ -65,14 +98,15 @@ Type lines of text and press Enter. Each line is one micro-batch of input for th
 With ncat -l 9999 running and the notebook cell running, type in the ncat terminal and watch the same lines appear in the Jupyter console output.
 To stop: interrupt the notebook cell (e.g. Kernel → Interrupt), then stop ncat (Ctrl+C).
 
-## Step 5 — (Optional) Run a Kafka Streaming Job
+## Step 5 — Run a Kafka Streaming Job
 5.1 Create a topic (from host or another terminal):
 ```
 docker exec -it ed-kafka /bin/bash
 kafka-topics --create --topic test-topic --bootstrap-server ed-kafka:9092
 kafka-topics --list --bootstrap-server ed-kafka:9092
 ```
-## 5.2 In Jupyter,
-use Kafka as source (e.g. read from test-topic, bootstrap ed-kafka:9092) and write to console or another sink. Use the same pattern as above: readStream → transformations → writeStream (e.g. format("console")).
-## 5.3 console
-Produce messages to test-topic with kafka-console-producer (inside the Kafka container) so your streaming job can consume them.
+## 5.2 In Jupyter
+Use Kafka as source (read from test-topic, bootstrap ed-kafka:9092) and write to console or another sink. Same pattern: readStream → transformations → writeStream (e.g. format("console")).
+
+## 5.3 Produce messages
+Produce messages to test-topic with kafka-console-producer inside the Kafka container so your streaming job can consume them.
